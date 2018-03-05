@@ -1,25 +1,25 @@
-from flask import Flask, request, json
-from flaskext.mysql import MySQL
+from flask import Flask, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
+from Services.CategoryService import cat_service
 
-mysql = MySQL();
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://admin:zaq12345@localhost/sys'
+db = SQLAlchemy(app)
+ma = Marshmallow(app)
 
-# MySQL configurations
-app.config['MYSQL_DATABASE_USER'] = 'admin'
-app.config['MYSQL_DATABASE_PASSWORD'] = 'zaq12345'
-app.config['MYSQL_DATABASE_DB'] = 'sys'
-app.config['MYSQL_DATABASE_HOST'] = '127.0.0.1'
-mysql.init_app(app)
+app.register_blueprint(cat_service)
+
 
 @app.route("/")
 def hello():
     return "Hello World!"
 
-@app.route('/signUp', methods=['POST'])
-def signUp():
-    #asdsa
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify(error=404, text=str(error)), 404
 
 
 if __name__ == '__main__':
     app.run(debug=True)
-
