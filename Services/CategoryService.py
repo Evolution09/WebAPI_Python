@@ -1,9 +1,10 @@
-from flask import Flask, jsonify, abort, request, make_response
+from flask import Flask, jsonify, abort, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from Models.Category import Category
 from Models.CategorySchema import CategorySchema
 from flask import Blueprint
+
 import MySQLdb
 
 app = Flask(__name__)
@@ -26,14 +27,19 @@ def category_list():
 
 @cat_service.route("/category", methods=["POST"])
 def add_category():
-    name = request.json['name']
-    code = request.json['code']
-    desc = request.json['description']
 
-    new_cat = Category(name, code, desc)
+    json = request.get_json()
+    name = json['name']
+    code = json['code']
+    desc = json['description']
 
-    db.session.add(new_cat)
-    db.session.commit()
+    try:
+        new_cat = Category(name, code, desc)
+        db.session.add(new_cat)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(error=400, text=str(e.message))
 
     return jsonify(new_cat), 200
 
@@ -52,11 +58,17 @@ def update_category(code):
     if cat is None:
         return abort(404)
 
-    cat.Name = request.json['name']
-    cat.Code = request.json['code']
-    cat.Description = request.json['description']
+    json = request.get_json()
+    cat.Name = json['name']
+    cat.Code = json['code']
+    cat.Description = json['description']
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(error=400, text=str(e.message))
+
     return category_schema.jsonify(cat), 200
 
 
@@ -66,8 +78,12 @@ def delete_category(code):
     if cat is None:
         return abort(404)
 
-    db.session.delete(cat)
-    db.session.commit()
+    try:
+        db.session.delete(cat)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(error=400, text=str(e.message))
 
     return category_schema.jsonify(cat)
 
