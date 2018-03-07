@@ -17,6 +17,14 @@ class Vat(db.Model):
         self.Code = code
         self.Value = value
 
+    def serialize(self):
+        return \
+            {
+                'Name': self.Name,
+                'Code': self.Code,
+                'Value': self.Value
+            }
+
     def __repr__(self):
         return '<VAT %r %r >' % (self.Code, self.Name)
 

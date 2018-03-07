@@ -2,7 +2,6 @@ from flask import Flask, jsonify, abort, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from Models.Category import Category
-from Models.CategorySchema import CategorySchema
 from flask import Blueprint
 
 import MySQLdb
@@ -14,15 +13,11 @@ ma = Marshmallow(app)
 
 cat_service = Blueprint('cat_service', __name__)
 
-category_schema = CategorySchema()
-categories_schema = CategorySchema(many=True)
-
 
 @cat_service.route("/category", methods=["GET"])
 def category_list():
     all_categories = Category.query.all()
-    result = categories_schema.dump(all_categories)
-    return jsonify(result.data)
+    return jsonify([e.serialize() for e in all_categories])
 
 
 @cat_service.route("/category", methods=["POST"])
@@ -31,7 +26,8 @@ def add_category():
     json = request.get_json()
     name = json['name']
     code = json['code']
-    desc = json['description']
+    if 'description' in json:
+        desc = json['description']
 
     try:
         new_cat = Category(name, code, desc)
@@ -41,7 +37,7 @@ def add_category():
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return jsonify(new_cat), 200
+    return jsonify(new_cat.serialize()), 201
 
 
 @cat_service.route('/category/<code>', methods=['GET'])
@@ -49,7 +45,7 @@ def get_category(code):
     cat = Category.query.filter(Category.Code == code).first()
     if cat is None:
         return abort(404)
-    return category_schema.jsonify(cat), 200
+    return jsonify(cat.serialize()), 200
 
 
 @cat_service.route('/category/<code>', methods=['PUT'])
@@ -59,9 +55,12 @@ def update_category(code):
         return abort(404)
 
     json = request.get_json()
-    cat.Name = json['name']
-    cat.Code = json['code']
-    cat.Description = json['description']
+    if 'name' in json:
+        cat.Name = json['name']
+    if 'code' in json:
+        cat.Code = json['code']
+    if 'description' in json:
+        cat.Description = json['description']
 
     try:
         db.session.commit()
@@ -69,7 +68,7 @@ def update_category(code):
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return category_schema.jsonify(cat), 200
+    return jsonify(cat.serialize()), 200
 
 
 @cat_service.route('/category/<code>', methods=['DELETE'])
@@ -85,7 +84,7 @@ def delete_category(code):
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return category_schema.jsonify(cat)
+    return jsonify(code=200, text="OK")
 
 
 if __name__ == '__main__':

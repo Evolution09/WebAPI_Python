@@ -2,7 +2,6 @@ from flask import Flask, jsonify, abort, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from Models.Vat import Vat
-from Models.VatSchema import VatSchema
 from flask import Blueprint
 
 import MySQLdb
@@ -14,15 +13,11 @@ ma = Marshmallow(app)
 
 vat_service = Blueprint('vat_service', __name__)
 
-vat_schema = VatSchema()
-vats_schema = VatSchema(many=True)
-
 
 @vat_service.route("/vat", methods=["GET"])
 def vats_list():
     all_vats = Vat.query.all()
-    result = vats_schema.dump(all_vats)
-    return jsonify(result.data)
+    return jsonify([e.serialize() for e in all_vats])
 
 
 @vat_service.route("/vat", methods=["POST"])
@@ -40,7 +35,7 @@ def add_vat():
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return jsonify(new_vat), 200
+    return jsonify(new_vat.serialize()), 201
 
 
 @vat_service.route('/vat/<code>', methods=['GET'])
@@ -48,7 +43,7 @@ def get_vat(code):
     vat = Vat.query.filter(Vat.Code == code).first()
     if vat is None:
         return abort(404)
-    return vat_schema.jsonify(vat), 200
+    return jsonify(vat.serialize()), 200
 
 
 @vat_service.route('/vat/<code>', methods=['PUT'])
@@ -58,9 +53,12 @@ def update_vat(code):
         return abort(404)
 
     json = request.get_json()
-    vat.Name = json['name']
-    vat.Code = json['code']
-    vat.Value = json['value']
+    if 'name' in json:
+        vat.Name = json['name']
+    if 'code' in json:
+        vat.Code = json['code']
+    if 'value' in json:
+        vat.Value = json['value']
 
     try:
         db.session.commit()
@@ -68,7 +66,7 @@ def update_vat(code):
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return vat_schema.jsonify(vat), 200
+    return jsonify(vat.serialize()), 200
 
 
 @vat_service.route('/vat/<code>', methods=['DELETE'])
@@ -84,7 +82,7 @@ def delete_vat(code):
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return vat_schema.jsonify(vat)
+    return jsonify(code=200, text="OK")
 
 
 if __name__ == '__main__':

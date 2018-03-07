@@ -2,7 +2,6 @@ from flask import Flask, jsonify, abort, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from Models.Address import Address
-from Models.AddressSchema import AddressSchema
 from flask import Blueprint
 import MySQLdb
 
@@ -13,15 +12,11 @@ ma = Marshmallow(app)
 
 address_service = Blueprint('address_service', __name__)
 
-address_schema = AddressSchema()
-addresses_schema = AddressSchema(many=True)
-
 
 @address_service.route("/address", methods=["GET"])
 def addresses_list():
     all_addresses = Address.query.all()
-    result = addresses_schema.dump(all_addresses)
-    return jsonify(result.data)
+    return jsonify([e.serialize() for e in all_addresses])
 
 
 @address_service.route("/address", methods=["POST"])
@@ -30,8 +25,11 @@ def add_address():
     country = json['country']
     city = json['city']
     street = json['street']
-    street_details = json['street_details']
-    app_no = json['apartament_no']
+    street_details = app_no = None
+    if 'street_details' in json:
+        street_details = json['street_details']
+    if 'apartament_no' in json:
+        app_no = json['apartament_no']
 
     try:
         new_address = Address(country, city, street, street_details, app_no)
@@ -41,7 +39,7 @@ def add_address():
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return jsonify(new_address), 200
+    return jsonify(new_address.serialize()), 201
 
 
 @address_service.route('/address/<id>', methods=['PUT'])
@@ -51,11 +49,16 @@ def update_address(id):
         return abort(404)
 
     json = request.get_json()
-    address.country = json['country']
-    address.city = json['city']
-    address.street = json['street']
-    address.street_details = json['street_details']
-    address.app_no = json['apartament_no']
+    if 'country' in json:
+        address.country = json['country']
+    if 'city' in json:
+        address.city = json['city']
+    if 'street' in json:
+        address.street = json['street']
+    if 'street_details' in json:
+        address.street_details = json['street_details']
+    if 'apartament_no' in json:
+        address.app_no = json['apartament_no']
 
     try:
         db.session.commit()
@@ -63,7 +66,7 @@ def update_address(id):
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return address_schema.jsonify(address), 200
+    return jsonify(address.serialize()), 200
 
 
 @address_service.route('/address/<id>', methods=['DELETE'])
@@ -79,7 +82,7 @@ def delete_address(id):
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return address_schema.jsonify(address)
+    return jsonify(code=200, text="OK")
 
 
 if __name__ == '__main__':

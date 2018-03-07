@@ -17,6 +17,14 @@ class Category(db.Model):
         self.Code = code
         self.Description = description
 
+    def serialize(self):
+        return \
+            {
+                'Name': self.Name,
+                'Code': self.Code,
+                'Description': self.Description
+            }
+
     def __repr__(self):
         return '<Category %r %r >' % (self.Code, self.Name)
 

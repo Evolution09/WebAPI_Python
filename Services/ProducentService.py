@@ -3,7 +3,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from Models.Producent import Producent
 from Models.Address import Address
-from Models.ProducentSchema import ProducentSchema
 from flask import Blueprint
 
 import MySQLdb
@@ -16,15 +15,11 @@ ma = Marshmallow(app)
 
 producent_service = Blueprint('producent_service', __name__)
 
-producent_schema = ProducentSchema()
-producents_schema = ProducentSchema(many=True)
-
 
 @producent_service.route("/producent", methods=["GET"])
 def producent_list():
     all_producents = Producent.query.all()
-    result = producents_schema.dump(all_producents)
-    return jsonify(result.data)
+    return jsonify([e.serialize() for e in all_producents])
 
 
 @producent_service.route("/producent", methods=["POST"])
@@ -33,39 +28,49 @@ def add_producent():
     json = request.get_json()
     name = json['name']
     code = json['code']
-    tel = json['telephone']
-    email = json['email']
+    if 'telephone' in json:
+        tel = json['telephone']
+    if 'email' in json:
+        email = json['email']
 
-    country = json['country']
-    city = json['city']
-    street = json['street']
-    street_details = json['street_details']
-    apart_no = json['apartament_no']
+    country = json['address']['country']
+    city = json['address']['city']
+    street = json['address']['street']
+    if 'address' in json and 'street_details' in json['address']:
+        street_details = json['address']['street_details']
+    if 'address' in json and 'apartament_no' in json['address']:
+        apart_no = json['address']['apartament_no']
 
     try:
         new_address = Address(country, city, street, street_details, apart_no)
         db.session.add(new_address)
         db.session.flush()
 
-        address = Address.query.filter(Address.ID == id).first()
+        db.session.refresh(new_address)
 
-        #new_producent = Producent(name, code, tel, email, )
-        #db.session.add(new_producent)
+        new_producent = Producent(name, code, tel, email, new_address.ID)
+        db.session.add(new_producent)
 
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return jsonify(new_address), 200
+    return jsonify(new_producent.serialize()), 201
 
 
 @producent_service.route('/producent/<code>', methods=['GET'])
 def get_producent(code):
     producent = Producent.query.filter(Producent.Code == code).first()
+
     if producent is None:
         return abort(404)
-    return producent_schema.jsonify(producent), 200
+
+    if producent.AddressID is not None:
+        address = Address.query.filter(Address.ID == producent.AddressID).first()
+        producent.Address = address
+
+    return jsonify(producent.serialize()), 200
 
 
 @producent_service.route('/producent/<code>', methods=['PUT'])
@@ -75,10 +80,14 @@ def update_producent(code):
         return abort(404)
 
     json = request.get_json()
-    producent.name = json['name']
-    producent.code = json['code']
-    producent.tel = json['telephone']
-    producent.email = json['email']
+    if 'name' in json:
+        producent.name = json['name']
+    if 'code' in json:
+        producent.code = json['code']
+    if 'telephone' in json:
+        producent.tel = json['telephone']
+    if 'email' in json:
+        producent.email = json['email']
 
     try:
         db.session.commit()
@@ -86,7 +95,7 @@ def update_producent(code):
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return producent_schema.jsonify(producent), 200
+    return jsonify(producent.serialize()), 200
 
 
 @producent_service.route('/producent/<code>', methods=['DELETE'])
@@ -102,7 +111,7 @@ def delete_producent(code):
         db.session.rollback()
         return jsonify(error=400, text=str(e.message))
 
-    return producent_schema.jsonify(producent)
+    return jsonify(code=200, text="OK")
 
 
 if __name__ == '__main__':

@@ -13,8 +13,8 @@ class Producent(db.Model):
     Code = db.Column(db.String(30), unique=True)
     Telephone = db.Column(db.String(9))
     Email = db.Column(db.String(50))
-    AddressID = db.Column(db.Integer, SQLAlchemy.ForeginKey("address.id"))
-    Address = db.relationship("Address", )
+    AddressID = db.Column(db.Integer)
+    Address
 
     def __init__(self, name, code, telephone, email, address_id):
         self.Name = name
@@ -23,7 +23,15 @@ class Producent(db.Model):
         self.Email = email
         self.AddressID = address_id
 
+    def serialize(self):
+        return \
+            {
+                'Name': self.Name,
+                'Code': self.Code,
+                'Telephone': self.Telephone,
+                'Email': self.Email,
+                'Address': self.Address.serialize()
+            }
+
     def __repr__(self):
         return '<Producent %r %r >' % (self.Code, self.Name)
-
-
