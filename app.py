@@ -5,6 +5,7 @@ from Services.CategoryService import cat_service
 from Services.VatService import vat_service
 from Services.AddressService import address_service
 from Services.ProducentService import producent_service
+from Services.ProductService import product_service
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://admin:zaq12345@localhost/sys'
@@ -15,6 +16,7 @@ app.register_blueprint(cat_service)
 app.register_blueprint(vat_service)
 app.register_blueprint(address_service)
 app.register_blueprint(producent_service)
+app.register_blueprint(product_service)
 
 
 @app.route("/")
