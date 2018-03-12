@@ -2,6 +2,7 @@ from flask import Flask, jsonify, abort, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from Models.Category import Category
+from Models.Product import Product
 from flask import Blueprint
 
 import MySQLdb
@@ -18,6 +19,24 @@ cat_service = Blueprint('cat_service', __name__)
 def category_list():
     all_categories = Category.query.all()
     return jsonify([e.serialize() for e in all_categories])
+
+
+@cat_service.route('/category/<code>', methods=['GET'])
+def get_category(code):
+    cat = Category.query.filter(Category.Code == code).first()
+    if cat is None:
+        return abort(404)
+    return jsonify(cat.serialize()), 200
+
+
+@cat_service.route('/category/<code>/product', methods=['GET'])
+def get_category_products(code):
+    category = Category.query.filter(Category.Code == code).first()
+    if category is None:
+        return abort(404)
+
+    prods = Product.query.filter(Product.CategoryID == category.ID).all()
+    return jsonify([e.serialize() for e in prods])
 
 
 @cat_service.route("/category", methods=["POST"])
@@ -38,14 +57,6 @@ def add_category():
         return jsonify(error=400, text=str(e.message))
 
     return jsonify(new_cat.serialize()), 201
-
-
-@cat_service.route('/category/<code>', methods=['GET'])
-def get_category(code):
-    cat = Category.query.filter(Category.Code == code).first()
-    if cat is None:
-        return abort(404)
-    return jsonify(cat.serialize()), 200
 
 
 @cat_service.route('/category/<code>', methods=['PUT'])

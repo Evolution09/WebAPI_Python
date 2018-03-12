@@ -32,6 +32,7 @@ def add_product():
     name = json['name']
     code = json['code']
     ean = json['ean']
+    description = None
     if 'description' in json:
         description = json['description']
     price = json['price']
